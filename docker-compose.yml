@@ -3,6 +3,6 @@ services:
     image: nginx:alpine
     container_name: fluxos_frontend
     volumes:
-      - ./frontend:/usr/share/nginx/html:ro
+      - .:/usr/share/nginx/html:ro
     ports:
       - "8080:80"
