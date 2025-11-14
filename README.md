@@ -8,6 +8,8 @@ Governo - Estado, Setor Bancário - Bancos, Setor Industrial, Setor Rural, Setor
 
 Tentei buscar dados mais reais possívels e perto da realidade, fontes como portal da tranparencia, IBGE, e algumas revistas e sites de notícias. A base de dados é referente ao ano de 2024.
 
+Vale lembrar que não foi considerada as classes social na divisão do povo. E pode faltar dados, o fluxo serve para ter uma noção e não pode se considerar conclusivo.
+
 A idéia do fluxo e saber como circula a moeda e quais setores melhor sobressaem nessa dinâmica.
 
 Tecnologias usadas foram: javascript (Konva), html, css e docker. Também tive ajuda de Inteligencia Artificial.
