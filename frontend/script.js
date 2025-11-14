@@ -12,7 +12,7 @@ const transferTypes = {
 // --- Stage & Layer ---
 const stage = new Konva.Stage({
   container: 'container',
-  width: window.innerWidth,
+  width: 1200,
   height: 800, // aumenta a altura
 });
 const layer = new Konva.Layer();
@@ -159,46 +159,17 @@ function animateTransfer(from, to, valor = 100, tempoMs = 2000, tipo = 'comercio
   tween.play();
 }
 
-// cria uma legenda fixa no canto superior direito
-function createLegend() {
-  const padding = 10;
-  const itemH = 22;
-  const items = Object.keys(transferTypes);
-  const boxW = 170;
-  const boxH = items.length * itemH + padding * 2;
-  const x = stage.width() - boxW - 20;
-  const y = 20;
-
-  const bg = new Konva.Rect({
-    x, y, width: boxW, height: boxH, cornerRadius: 8, fill: 'rgba(255,255,255,0.9)', stroke: '#ccc', strokeWidth: 1
-  });
-  const grp = new Konva.Group();
-  grp.add(bg);
-
-  items.forEach((key, i) => {
+function createLegendHTML() {
+  const legendaDiv = document.getElementById('legenda');
+  legendaDiv.innerHTML = '<strong>Legenda:</strong><br>';
+  Object.keys(transferTypes).forEach(key => {
     const color = transferTypes[key].color;
-    const label = transferTypes[key].label || key;
-    const rect = new Konva.Rect({
-      x: x + padding,
-      y: y + padding + i * itemH + 4,
-      width: 14,
-      height: 14,
-      fill: color,
-      cornerRadius: 3,
-    });
-    const txt = new Konva.Text({
-      x: x + padding + 20,
-      y: y + padding + i * itemH,
-      text: `${label}`,
-      fontSize: 13,
-      fill: '#333',
-    });
-    grp.add(rect);
-    grp.add(txt);
+    const label = transferTypes[key].label;
+    legendaDiv.innerHTML += `
+      <span style="display:inline-block;width:14px;height:14px;background:${color};border-radius:3px;margin-right:6px;"></span>
+      ${label}<br>
+    `;
   });
-
-  layer.add(grp);
-  layer.batchDraw();
 }
 
 // caminho para seu JSON (pode ser um arquivo local ou endpoint da API)
@@ -208,6 +179,7 @@ fetch(DATA_URL)
   .then(res => res.json())
   .then(data => {
     initSimulation(data);
+    createLegendHTML();
   })
   .catch(err => console.error("Erro carregando dados:", err));
 
@@ -228,7 +200,7 @@ function initSimulation(data) {
     });
 
     // legenda fixa
-    createLegend();
+    //createLegend();
 
     // criar animações com base nas transferências
     data.transfers.forEach(t => {
@@ -242,5 +214,31 @@ function initSimulation(data) {
         );
       }, t.interval);
     });
+  });
+}
+
+fetch('data.json')
+  .then(response => response.json())
+  .then(dados => preencherTabela(dados.transfers, dados.entities));
+
+function preencherTabela(transfers, entities) {
+  const tbody = document.querySelector("#tabela-orcamento tbody");
+  tbody.innerHTML = "";
+
+  // Função para buscar o nome pelo id
+  function getEntityName(id) {
+    const entidade = entities.find(e => e.id === id);
+    return entidade ? entidade.name : id;
+  }
+
+  transfers.forEach(item => {
+    const linha = document.createElement("tr");
+    linha.innerHTML = `
+      <td>${getEntityName(item.from)}</td>
+      <td>${item.type}</td>
+      <td>R$ ${item.amount.toLocaleString('pt-BR')}</td>
+      <td>${getEntityName(item.to)}</td>
+    `;
+    tbody.appendChild(linha);
   });
 }
