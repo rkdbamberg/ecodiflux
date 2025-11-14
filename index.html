@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <title>Fluxos Animados</title>
   <script src="https://cdn.jsdelivr.net/npm/konva@9/konva.min.js"></script>
+  <head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  </head>
+
   <style>
     body { margin: 0; padding: 0; }
     #layout {
@@ -29,7 +33,7 @@
 </head>
 <body>
 <h1 style="text-align: center; margin-bottom: 30px;">
-  Fluxo Econômico - Simulação Interativa
+  Fluxo Econômico - Simulação Interativa <a href="README.md">[?]</a>
 </h1>
 
 <!-- ...código existente... -->
@@ -42,13 +46,13 @@
 
   <!-- Tabela à direita -->
   <div id="tabela" style="flex: 1;">
-    <table id="tabela-orcamento" border="1">
+    <table class="table" id="tabela-orcamento" border="1">
       <thead>
         <tr>
-          <th>Origem</th>
-          <th>Tipo de Orçamento</th>
-          <th>Valor</th>
-          <th>Destino</th>
+          <th>Setor Origem</th>
+          <th>Fluxo Monetário</th>
+          <th>Valor (Bilhões)</th>
+          <th>Setor Destino</th>
         </tr>
       </thead>
       <tbody>
