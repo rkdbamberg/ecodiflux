@@ -30,7 +30,7 @@ Tentei buscar dados mais real possível e próximos da realidade, utilizando fon
 * Não foram consideradas as classes sociais na divisão do Setor das Famílias.
 * Pode haver falta de dados em alguns pontos devido à complexidade da obtenção de informações.
 
-A ideia central é saber como a moeda circula e quais setores melhor se sobressaem nessa dinâmica.
+A ideia central é saber como a moeda circula e quais setores melhor se sobressaem nessa dinâmica, e se houver alguma mudança como poderia impactar em casa setor.
 
 ---
 
