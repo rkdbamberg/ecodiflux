@@ -22,7 +22,7 @@ O fluxo circular abrange os seguintes setores, essenciais para a dinâmica econ�
 ### 🔎 Metodologia e Limitações
 
 #### **Base de Dados**
-Tentei buscar dados mais real possível e próximos da realidade, utilizando fontes públicas como o **Portal da Transparência**, **IBGE**, além de artigos em revistas e sites de notícias. A base de dados utilizada é referente ao ano de **2024**.
+Tentei buscar dados mais reais possíveis e próximos da realidade, utilizando fontes públicas como o **Portal da Transparência**, **IBGE**, além de artigos em revistas e sites de notícias. A base de dados utilizada é referente ao ano de **2024**.
 
 #### **Nota Importante**
 É fundamental notar que o fluxo serve primariamente para gerar uma **noção e visualização** da dinâmica monetária e **não deve ser considerado conclusivo**.
