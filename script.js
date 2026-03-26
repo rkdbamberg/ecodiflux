@@ -10,13 +10,46 @@ const transferTypes = {
 };
 
 // --- Stage & Layer ---
-const stage = new Konva.Stage({
-  container: 'container',
-  width: 1200,
-  height: 800, // aumenta a altura
+const containerElem = document.getElementById('container');
+let stage = null;
+let layer = null;
+let legendGroup = null;
+let activeTransfers = [];
+let entitiesData = [];
+let currentDay = 0;
+let isPlaying = false;
+let dayInterval = null;
+
+function getStageDimensions() {
+  const width = containerElem ? containerElem.clientWidth : 1200;
+  const height = Math.max(480, window.innerHeight - 170);
+  return { width, height };
+}
+
+function createStage() {
+  if (!containerElem) return;
+  const dims = getStageDimensions();
+  stage = new Konva.Stage({
+    container: 'container',
+    width: dims.width,
+    height: dims.height,
+  });
+  layer = new Konva.Layer();
+  stage.add(layer);
+}
+
+function resizeStage() {
+  if (!containerElem || !stage) return;
+  const dims = getStageDimensions();
+  stage.width(dims.width);
+  stage.height(dims.height);
+  createLegendKonva();
+  if (layer) layer.batchDraw();
+}
+
+window.addEventListener('resize', () => {
+  resizeStage();
 });
-const layer = new Konva.Layer();
-stage.add(layer);
 
 // --- Helpers ---
 function updateLabel(entity) {
@@ -159,17 +192,38 @@ function animateTransfer(from, to, valor = 100, tempoMs = 2000, tipo = 'comercio
   tween.play();
 }
 
-function createLegendHTML() {
-  const legendaDiv = document.getElementById('legenda');
-  legendaDiv.innerHTML = '<strong>Legenda:</strong><br>';
-  Object.keys(transferTypes).forEach(key => {
-    const color = transferTypes[key].color;
-    const label = transferTypes[key].label;
-    legendaDiv.innerHTML += `
-      <span style="display:inline-block;width:14px;height:14px;background:${color};border-radius:3px;margin-right:6px;"></span>
-      ${label}<br>
+function populateControls() {
+  const container = document.getElementById('sliders-container');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  Object.keys(transferTypes).forEach(type => {
+    const div = document.createElement('div');
+    div.className = 'mb-3';
+    div.innerHTML = `
+      <label class="form-label">${transferTypes[type].label}: <span id="value-${type}">1.0x</span></label>
+      <input type="range" class="form-range" id="slider-${type}" min="0" max="2" step="0.1" value="1">
     `;
+    container.appendChild(div);
+
+    const slider = document.getElementById(`slider-${type}`);
+    slider.addEventListener('input', () => updateMultiplier(type, parseFloat(slider.value)));
   });
+}
+
+function updateMultiplier(type, value) {
+  multipliers[type] = value;
+  document.getElementById(`value-${type}`).textContent = `${value.toFixed(1)}x`;
+  recalculateTransfers();
+}
+
+function recalculateTransfers() {
+  activeTransfers = originalTransfers.map(t => ({
+    ...t,
+    amount: Math.round(t.amount * multipliers[t.type])
+  }));
+  preencherTabela(activeTransfers, entitiesData);
 }
 
 // caminho para seu JSON (pode ser um arquivo local ou endpoint da API)
@@ -178,17 +232,23 @@ const DATA_URL = "data.json";
 fetch(DATA_URL)
   .then(res => res.json())
   .then(data => {
-    initSimulation(data);
-    createLegendHTML();
+    entitiesData = data.entities;
+    activeTransfers = data.transfers.map(t => ({...t}));
+    if (containerElem) {
+      createStage();
+      initSimulation(data);
+      setupSimulationControls();
+    }
+    preencherTabela(activeTransfers, entitiesData);
   })
   .catch(err => console.error("Erro carregando dados:", err));
 
 function initSimulation(data) {
   const entities = {};
   
-  // criar entidades dinamicamente
+  // criar entidades dinamicamente, subindo 40px para evitar corte das labels
   data.entities.forEach(e => {
-    entities[e.id] = createEntity(e.img, e.x, e.y, e.name, e.saldo);
+    entities[e.id] = createEntity(e.img, e.x, e.y - 40, e.name, e.saldo);
   });
 
   waitForEntitiesReady(entities, () => {
@@ -199,12 +259,10 @@ function initSimulation(data) {
       }
     });
 
-    // legenda fixa
-    //createLegend();
-
     // criar animações com base nas transferências
-    data.transfers.forEach(t => {
+    activeTransfers.forEach(t => {
       setInterval(() => {
+        if (!isPlaying) return;
         animateTransfer(
           entities[t.from],
           entities[t.to],
@@ -215,14 +273,138 @@ function initSimulation(data) {
       }, t.interval);
     });
   });
+
+  // criar legenda dentro do gráfico
+  createLegendKonva();
 }
 
-fetch('data.json')
-  .then(response => response.json())
-  .then(dados => preencherTabela(dados.transfers, dados.entities));
+function setupSimulationControls() {
+  const playPauseBtn = document.getElementById('play-pause-btn');
+  const resetBtn = document.getElementById('reset-btn');
+  const dayCounter = document.getElementById('day-counter');
+
+  if (!playPauseBtn || !resetBtn || !dayCounter) return;
+
+  playPauseBtn.addEventListener('click', () => {
+    isPlaying = !isPlaying;
+    playPauseBtn.textContent = isPlaying ? '⏸️ Pause' : '▶️ Play';
+    playPauseBtn.className = isPlaying ? 'btn btn-warning btn-sm me-2' : 'btn btn-success btn-sm me-2';
+
+    if (isPlaying) {
+      startDayCounter();
+    } else {
+      stopDayCounter();
+    }
+  });
+
+  resetBtn.addEventListener('click', () => {
+    isPlaying = false;
+    currentDay = 0;
+    dayCounter.textContent = currentDay;
+    playPauseBtn.textContent = '▶️ Play';
+    playPauseBtn.className = 'btn btn-success btn-sm me-2';
+    stopDayCounter();
+    // Opcional: resetar saldos das entidades
+  });
+}
+
+function startDayCounter() {
+  if (dayInterval) return;
+  dayInterval = setInterval(() => {
+    currentDay++;
+    document.getElementById('day-counter').textContent = currentDay;
+  }, 1000);
+}
+
+function stopDayCounter() {
+  if (dayInterval) {
+    clearInterval(dayInterval);
+    dayInterval = null;
+  }
+}
+
+function createLegendKonva() {
+  console.log('Creating legend');
+  if (!stage || !layer) {
+    console.log('No stage or layer');
+    return;
+  }
+
+  // Remover legenda anterior se existir
+  if (legendGroup) {
+    legendGroup.destroy();
+  }
+
+  legendGroup = new Konva.Group();
+  layer.add(legendGroup);
+
+  const legendX = stage.width() - 200;
+  const legendY = 10;
+  let currentY = legendY;
+
+  console.log('Legend position:', legendX, legendY);
+
+  // Fundo semi-transparente
+  const bg = new Konva.Rect({
+    x: legendX - 10,
+    y: legendY - 5,
+    width: 190,
+    height: Object.keys(transferTypes).length * 20 + 30,
+    fill: 'rgba(255, 255, 255, 0.9)',
+    stroke: '#ccc',
+    strokeWidth: 1,
+    cornerRadius: 5,
+  });
+  legendGroup.add(bg);
+
+  // Título
+  const title = new Konva.Text({
+    x: legendX,
+    y: currentY,
+    text: 'Legenda:',
+    fontSize: 14,
+    fontStyle: 'bold',
+    fill: 'black',
+  });
+  legendGroup.add(title);
+  currentY += 20;
+
+  Object.keys(transferTypes).forEach(key => {
+    const color = transferTypes[key].color;
+    const label = transferTypes[key].label;
+
+    // Quadrado de cor
+    const rect = new Konva.Rect({
+      x: legendX,
+      y: currentY,
+      width: 14,
+      height: 14,
+      fill: color,
+      stroke: '#000',
+      strokeWidth: 1,
+    });
+    legendGroup.add(rect);
+
+    // Texto
+    const text = new Konva.Text({
+      x: legendX + 20,
+      y: currentY,
+      text: label,
+      fontSize: 12,
+      fill: 'black',
+    });
+    legendGroup.add(text);
+
+    currentY += 18;
+  });
+
+  layer.batchDraw();
+  console.log('Legend created');
+}
 
 function preencherTabela(transfers, entities) {
   const tbody = document.querySelector("#tabela-orcamento tbody");
+  if (!tbody) return;
   tbody.innerHTML = "";
 
   // Função para buscar o nome pelo id
@@ -231,14 +413,37 @@ function preencherTabela(transfers, entities) {
     return entidade ? entidade.name : id;
   }
 
-  transfers.forEach(item => {
+  transfers.forEach((item, index) => {
     const linha = document.createElement("tr");
     linha.innerHTML = `
       <td>${getEntityName(item.from)}</td>
       <td>${item.type}</td>
-      <td>R$ ${item.amount.toLocaleString('pt-BR')}</td>
+      <td><input type="number" class="form-control form-control-sm" value="${item.amount}" data-index="${index}" min="0" step="10"></td>
       <td>${getEntityName(item.to)}</td>
     `;
     tbody.appendChild(linha);
   });
+
+  // Adicionar event listeners para inputs
+  tbody.querySelectorAll('input').forEach(input => {
+    input.addEventListener('change', (e) => {
+      const index = parseInt(e.target.dataset.index);
+      activeTransfers[index].amount = parseInt(e.target.value) || 0;
+      // Se DataTable, recarregar
+      if ($.fn.DataTable && $('#tabela-orcamento').DataTable()) {
+        $('#tabela-orcamento').DataTable().destroy();
+        preencherTabela(activeTransfers, entitiesData);
+      }
+    });
+  });
+
+  // Inicializar DataTable se jQuery e DataTable estiverem disponíveis
+  if (typeof $ !== 'undefined' && $.fn.DataTable) {
+    $('#tabela-orcamento').DataTable({
+      responsive: true,
+      language: {
+        url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json'
+      }
+    });
+  }
 }
